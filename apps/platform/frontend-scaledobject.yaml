@@ -26,5 +26,11 @@ spec:
         # probe traffic (confirmed via direct query to be the bulk of
         # request volume at idle) doesn't count toward the scaling
         # threshold -- only real traffic should trigger scale-out.
-        query: sum(rate(http_server_request_duration_seconds_count{job="cm-frontend", http_route!~"/healthz|/readyz"}[1m]))
+        #
+        # [2m], not [1m]: with a 30s scrape interval, a 1m rate() window
+        # only reliably contains 1-2 samples, and PromQL needs at least 2
+        # to compute anything -- verified empirically that [1m] returned
+        # no data at all here while [2m] did, on the exact same live
+        # traffic. Standard PromQL guidance is >=4x the scrape interval.
+        query: sum(rate(http_server_request_duration_seconds_count{job="cm-frontend", http_route!~"/healthz|/readyz"}[2m]))
         threshold: "10"
