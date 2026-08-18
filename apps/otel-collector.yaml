@@ -18,6 +18,9 @@ spec:
         mode: deployment
         replicaCount: 1
 
+        image:
+          repository: otel/opentelemetry-collector-contrib
+
         serviceAccount:
           create: true
           name: otel-collector
