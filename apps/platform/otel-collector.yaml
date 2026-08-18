@@ -50,7 +50,12 @@ spec:
             otlphttp/metrics:
               tls:
                 insecure: false
-              endpoint: "https://monitoring.us-east-2.amazonaws.com/v1/metrics"
+              # `endpoint` is a base URL that the exporter appends /v1/metrics
+              # to itself -- using it with the full path already included
+              # doubled the path (.../v1/metrics/v1/metrics, a 404) and
+              # dropped every export. `metrics_endpoint` is the override
+              # that's used as-is, matching `logs_endpoint` below.
+              metrics_endpoint: "https://monitoring.us-east-2.amazonaws.com/v1/metrics"
               auth:
                 authenticator: sigv4auth/metrics
 
