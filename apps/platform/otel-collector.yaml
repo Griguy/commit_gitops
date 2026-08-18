@@ -41,7 +41,26 @@ spec:
           receivers:
             jaeger: null
             zipkin: null
-            prometheus: null
+            # Container CPU/memory (cAdvisor) and pod replica counts
+            # (kube-state-metrics) only exist in the cluster's own Prometheus
+            # -- neither app emits them via OTLP, and there's no other path
+            # to get them into CloudWatch's OTLP store. Federating the
+            # specific series needed reuses the already-working CloudWatch
+            # export pipeline instead of standing up a second one (e.g.
+            # awscontainerinsightreceiver).
+            prometheus:
+              config:
+                scrape_configs:
+                  - job_name: cm-app-container-metrics
+                    scrape_interval: 30s
+                    honor_labels: true
+                    metrics_path: /federate
+                    params:
+                      "match[]":
+                        - '{__name__=~"container_cpu_usage_seconds_total|container_memory_working_set_bytes|kube_deployment_status_replicas", namespace=~"backend|frontend"}'
+                    static_configs:
+                      - targets:
+                          - kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090
 
           exporters:
             # CloudWatch's OTLP endpoint is HTTP-only (no gRPC), and metrics
@@ -90,6 +109,7 @@ spec:
               metrics:
                 receivers:
                   - otlp
+                  - prometheus
                 processors:
                   - memory_limiter
                   - batch
