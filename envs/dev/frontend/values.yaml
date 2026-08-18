@@ -4,3 +4,13 @@
 # instead of silently running whatever "latest" happens to resolve to.
 image:
   tag: 2248bd4
+
+# Grouped with the Grafana Ingress (apps/platform/kube-prometheus-stack.yaml)
+# onto one shared ALB instead of each getting its own. group.order is lower
+# (higher priority) on Grafana's Ingress so its more specific /grafana rule
+# is evaluated before this Ingress's catch-all "/" rule -- otherwise "/"
+# would match /grafana requests first and Grafana would never be reached.
+ingress:
+  annotations:
+    alb.ingress.kubernetes.io/group.name: commit-lab-dev
+    alb.ingress.kubernetes.io/group.order: "20"

@@ -40,6 +40,37 @@ spec:
                 sigV4Region: us-east-2
               editable: false
 
+          # Grafana's own chart key is literally "grafana.ini" (the ini
+          # filename), not a nested path -- server.root_url and
+          # serve_from_sub_path are both required together, or Grafana's own
+          # links/redirects/asset URLs come out without the /grafana prefix
+          # and break once the browser is actually behind that path.
+          "grafana.ini":
+            server:
+              root_url: "https://lab-commit-task.commit-lab.internal/grafana/"
+              serve_from_sub_path: true
+
+          # Grouped onto the same ALB as the frontend Ingress
+          # (envs/dev/frontend/values.yaml) instead of getting its own.
+          # Lower group.order than frontend's "20" so this more specific
+          # /grafana rule is evaluated before frontend's catch-all "/" --
+          # otherwise "/" would match /grafana requests first.
+          ingress:
+            enabled: true
+            ingressClassName: alb
+            annotations:
+              alb.ingress.kubernetes.io/group.name: commit-lab-dev
+              alb.ingress.kubernetes.io/group.order: "10"
+              alb.ingress.kubernetes.io/scheme: internal
+              alb.ingress.kubernetes.io/target-type: ip
+              alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-2:276699358299:certificate/0572f4f6-d3c0-4004-9eb7-1133e5bf6d39
+              alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+              alb.ingress.kubernetes.io/ssl-redirect: '443'
+            hosts:
+              - lab-commit-task.commit-lab.internal
+            path: /grafana
+            pathType: Prefix
+
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring
