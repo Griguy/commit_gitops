@@ -21,3 +21,8 @@ spec:
   endpoints:
     - port: prom-exporter
       interval: 30s
+      # Without this, Prometheus's own service-discovery "job" label (the
+      # scraped Service's name) collides with the scraped payload's own
+      # "job" label (service.name from the app, e.g. "cm-frontend") and
+      # the app's value gets silently renamed to "exported_job" instead.
+      honorLabels: true
