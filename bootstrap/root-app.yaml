@@ -17,6 +17,18 @@ spec:
     server: https://kubernetes.default.svc
     namespace: argocd
 
+  # k6-load-generator's replica count is meant to be scaled manually
+  # (kubectl scale ... --replicas=1/0) to start/stop the load-test demo --
+  # without this, selfHeal would revert that back to the manifest's
+  # replicas: 0 on its next sync.
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      name: k6-load-generator
+      namespace: load-testing
+      jsonPointers:
+        - /spec/replicas
+
   syncPolicy:
     automated:
       prune: true

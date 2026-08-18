@@ -1,0 +1,30 @@
+# Plain KEDA resource, not an Argo CD Application -- same pattern as the
+# Grafana dashboard ConfigMap and the otel-collector ServiceMonitor. KEDA
+# creates and owns the underlying HorizontalPodAutoscaler for this
+# Deployment automatically; nothing else needs to declare one.
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: cm-frontend
+  namespace: frontend
+spec:
+  scaleTargetRef:
+    name: cm-frontend
+  minReplicaCount: 1
+  maxReplicaCount: 4
+  # Default is 300s -- shortened so a demo doesn't need to wait 5 minutes
+  # to see the scale-down half after load stops. KEDA polls the metric
+  # every pollingInterval and only scales down once the metric has stayed
+  # below threshold for the full cooldown window.
+  cooldownPeriod: 60
+  pollingInterval: 15
+  triggers:
+    - type: prometheus
+      metadata:
+        serverAddress: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090
+        # Excludes /healthz and /readyz so the constant liveness/readiness
+        # probe traffic (confirmed via direct query to be the bulk of
+        # request volume at idle) doesn't count toward the scaling
+        # threshold -- only real traffic should trigger scale-out.
+        query: sum(rate(http_server_request_duration_seconds_count{job="cm-frontend", http_route!~"/healthz|/readyz"}[1m]))
+        threshold: "10"

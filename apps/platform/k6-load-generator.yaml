@@ -1,0 +1,68 @@
+# Plain resources, not an Argo CD Application -- same pattern as the other
+# platform-level extras. Starts at replicas: 0 on purpose: scale it up
+# (`kubectl scale deployment k6-load-generator -n load-testing --replicas=1`)
+# to start generating load and demonstrate scale-out, back to 0 to stop and
+# watch KEDA scale the frontend back down. root-app.yaml's ignoreDifferences
+# on this Deployment's replica count is what stops Argo CD's selfHeal from
+# immediately reverting that manual scale back to 0.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: load-testing
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: k6-frontend-load-script
+  namespace: load-testing
+data:
+  script.js: |
+    import http from 'k6/http';
+
+    // constant-arrival-rate keeps req/s deterministic regardless of
+    // response latency -- a VU-loop-based executor's actual rate drifts
+    // with latency, which makes it unreliable for reliably clearing a
+    // fixed 10 req/s scaling threshold.
+    export const options = {
+      scenarios: {
+        frontend_load: {
+          executor: 'constant-arrival-rate',
+          rate: 20,
+          timeUnit: '1s',
+          duration: '30m',
+          preAllocatedVUs: 10,
+          maxVUs: 50,
+        },
+      },
+    };
+
+    export default function () {
+      http.get('http://cm-frontend.frontend.svc.cluster.local:8080/');
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: k6-load-generator
+  namespace: load-testing
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: k6-load-generator
+  template:
+    metadata:
+      labels:
+        app: k6-load-generator
+    spec:
+      containers:
+        - name: k6
+          image: grafana/k6:latest
+          args: ["run", "/scripts/script.js"]
+          volumeMounts:
+            - name: script
+              mountPath: /scripts
+      volumes:
+        - name: script
+          configMap:
+            name: k6-frontend-load-script
