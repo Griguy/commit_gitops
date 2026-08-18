@@ -50,3 +50,8 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+      # The Prometheus Operator CRDs are large enough that client-side apply's
+      # last-applied-configuration annotation blows past Kubernetes' 262144-byte
+      # annotation cap; server-side apply tracks field ownership instead of
+      # stuffing the whole manifest into an annotation, so it doesn't hit the limit.
+      - ServerSideApply=true
