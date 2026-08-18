@@ -23,11 +23,12 @@ data:
           "title": "HTTP request rate",
           "type": "timeseries",
           "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
-          "datasource": { "type": "grafana-amazonprometheus-datasource", "uid": "cloudwatch-otlp" },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "description": "Cluster's own Prometheus, not CloudWatch -- Grafana's AWS-authenticated Prometheus datasource options (generic sigV4Auth and the dedicated AMP plugin) both hardcode SigV4 signing to service \"aps\" instead of the \"monitoring\" CloudWatch's OTLP endpoint actually needs, so neither can query it. Same metric, same otel-collector, just the local classic-Prometheus-format copy instead of the CloudWatch-native one.",
           "targets": [
             {
-              "expr": "sum by (\"@resource.service.name\") (histogram_count(rate({\"http.server.request.duration\", \"@resource.service.name\"=~\"cm-frontend|cm-backend\"}[5m])))",
-              "legendFormat": "{{@resource.service.name}}"
+              "expr": "sum by (job) (rate(http_server_request_duration_seconds_count{job=~\"cm-frontend|cm-backend\", http_route!~\"/healthz|/readyz\"}[2m]))",
+              "legendFormat": "{{job}}"
             }
           ]
         },
@@ -36,11 +37,11 @@ data:
           "title": "HTTP request duration (p95)",
           "type": "timeseries",
           "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
-          "datasource": { "type": "grafana-amazonprometheus-datasource", "uid": "cloudwatch-otlp" },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
           "targets": [
             {
-              "expr": "histogram_quantile(0.95, sum by (\"@resource.service.name\", le) (rate({\"http.server.request.duration\", \"@resource.service.name\"=~\"cm-frontend|cm-backend\"}[5m])))",
-              "legendFormat": "{{@resource.service.name}} p95"
+              "expr": "histogram_quantile(0.95, sum by (job, le) (rate(http_server_request_duration_seconds_bucket{job=~\"cm-frontend|cm-backend\", http_route!~\"/healthz|/readyz\"}[2m])))",
+              "legendFormat": "{{job}} p95"
             }
           ]
         },
