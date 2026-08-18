@@ -26,3 +26,10 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+      # crd-scaledjobs.yaml is 667KB -- client-side apply's
+      # last-applied-configuration annotation blows past Kubernetes'
+      # 262144-byte cap (same failure mode hit with kube-prometheus-stack's
+      # CRDs earlier), so that one CRD silently failed to install while
+      # the smaller KEDA CRDs succeeded, and the operator crash-looped on
+      # "no matches for kind ScaledJob" until this was caught.
+      - ServerSideApply=true
