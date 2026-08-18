@@ -1,0 +1,39 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: aws-load-balancer-controller
+  namespace: argocd
+spec:
+  project: default
+
+  source:
+    repoURL: https://aws.github.io/eks-charts
+    chart: aws-load-balancer-controller
+    targetRevision: 3.5.0
+    helm:
+      values: |
+        clusterName: commit-lab-dev
+        region: us-east-2
+        vpcId: vpc-0eeff49aae233a188
+
+        # No EC2 node groups on this cluster (EKS Auto Mode), so the
+        # controller's pods land on Fargate/Auto Mode compute same as
+        # everything else -- nothing special needed here for that.
+        replicaCount: 1
+
+        serviceAccount:
+          create: true
+          name: aws-load-balancer-controller
+          annotations:
+            eks.amazonaws.com/role-arn: arn:aws:iam::276699358299:role/commit-lab-dev-aws-load-balancer-controller
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

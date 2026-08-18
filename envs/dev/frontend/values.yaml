@@ -1,0 +1,6 @@
+# CodeBuild overwrites image.tag here on every successful build (see
+# commit_frontend/buildspec.yml) -- "unreleased" is a deliberately-broken
+# placeholder so a stale/pre-pipeline deploy fails loudly (ImagePullBackOff)
+# instead of silently running whatever "latest" happens to resolve to.
+image:
+  tag: unreleased

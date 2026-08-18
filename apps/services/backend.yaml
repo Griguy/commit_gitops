@@ -1,0 +1,34 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: backend
+  namespace: argocd
+spec:
+  project: default
+
+  # Multi-source: the chart itself comes from cm_charts pinned to a tagged
+  # release (never `main` -- a template edit there would otherwise go live
+  # the moment it merges, with no explicit promotion step), while the
+  # environment-specific values live in this repo and are picked up on
+  # every push since they're the actual deploy trigger CodeBuild writes to.
+  sources:
+    - repoURL: https://github.com/Griguy/commit_charts.git
+      targetRevision: backend-0.1.0
+      path: charts/backend
+      helm:
+        valueFiles:
+          - $values/envs/dev/backend/values.yaml
+    - repoURL: https://github.com/Griguy/commit_gitops.git
+      targetRevision: main
+      ref: values
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: backend
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

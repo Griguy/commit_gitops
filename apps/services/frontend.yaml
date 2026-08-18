@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: frontend
+  namespace: argocd
+spec:
+  project: default
+
+  sources:
+    - repoURL: https://github.com/Griguy/commit_charts.git
+      targetRevision: frontend-0.1.0
+      path: charts/frontend
+      helm:
+        valueFiles:
+          - $values/envs/dev/frontend/values.yaml
+    - repoURL: https://github.com/Griguy/commit_gitops.git
+      targetRevision: main
+      ref: values
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: frontend
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
