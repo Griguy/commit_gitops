@@ -3,4 +3,4 @@
 # placeholder so a stale/pre-pipeline deploy fails loudly (ImagePullBackOff)
 # instead of silently running whatever "latest" happens to resolve to.
 image:
-  tag: unreleased
+  tag: 1bbbad3
