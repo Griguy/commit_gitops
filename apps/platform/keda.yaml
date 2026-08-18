@@ -3,6 +3,11 @@ kind: Application
 metadata:
   name: keda
   namespace: argocd
+  annotations:
+    # root applies every manifest under apps/ in one pass -- without this,
+    # it tries to create the ScaledObject in apps/platform/frontend-scaledobject.yaml
+    # before this Application (and the CRD it installs) exists at all.
+    argocd.argoproj.io/sync-wave: "-1"
 spec:
   project: default
 
