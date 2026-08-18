@@ -36,6 +36,15 @@ spec:
             enabled: false
           zipkin:
             enabled: false
+          # Local re-exposition of ingested metrics for the in-cluster
+          # Prometheus to scrape -- separate from CloudWatch export, so KEDA
+          # can query request-rate for autoscaling without needing AWS
+          # credentials or leaving the cluster.
+          prom-exporter:
+            enabled: true
+            containerPort: 8889
+            servicePort: 8889
+            protocol: TCP
 
         config:
           receivers:
@@ -92,6 +101,13 @@ spec:
               auth:
                 authenticator: sigv4auth/logs
 
+            # Re-exposes ingested metrics in classic Prometheus exposition
+            # format (histograms as _count/_bucket/_sum families) -- unlike
+            # the otlphttp/metrics path to CloudWatch, this is exactly the
+            # format KEDA's prometheus scaler and a local Prometheus expect.
+            prometheus:
+              endpoint: 0.0.0.0:8889
+
           extensions:
             sigv4auth/metrics:
               service: "monitoring"
@@ -115,6 +131,7 @@ spec:
                   - batch
                 exporters:
                   - otlphttp/metrics
+                  - prometheus
               logs:
                 receivers:
                   - otlp

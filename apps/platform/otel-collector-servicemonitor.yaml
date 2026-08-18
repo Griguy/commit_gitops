@@ -1,0 +1,23 @@
+# Plain ServiceMonitor, not an Argo CD Application -- same pattern as the
+# Grafana dashboard ConfigMap. The `release: kube-prometheus-stack` label is
+# required: this cluster's Prometheus CR has serviceMonitorSelector scoped
+# to that label (confirmed via `kubectl get prometheus -o jsonpath=...`),
+# so a ServiceMonitor without it is silently ignored, not an error.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: otel-collector-prom-exporter
+  namespace: observability
+  labels:
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: opentelemetry-collector
+      app.kubernetes.io/instance: otel-collector
+  namespaceSelector:
+    matchNames:
+      - observability
+  endpoints:
+    - port: prom-exporter
+      interval: 30s
