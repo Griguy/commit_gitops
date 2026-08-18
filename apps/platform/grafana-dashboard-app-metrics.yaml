@@ -23,11 +23,11 @@ data:
           "title": "HTTP request rate",
           "type": "timeseries",
           "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
-          "datasource": { "type": "prometheus", "uid": "cloudwatch-otlp" },
+          "datasource": { "type": "grafana-amazonprometheus-datasource", "uid": "cloudwatch-otlp" },
           "targets": [
             {
-              "expr": "sum(rate({\"http.server.request.duration_count\", \"@resource.service.name\"=~\"cm-frontend|cm-backend\"}[5m])) by (resource_service_name)",
-              "legendFormat": "{{resource_service_name}}"
+              "expr": "sum by (\"@resource.service.name\") (histogram_count(rate({\"http.server.request.duration\", \"@resource.service.name\"=~\"cm-frontend|cm-backend\"}[5m])))",
+              "legendFormat": "{{@resource.service.name}}"
             }
           ]
         },
@@ -36,37 +36,52 @@ data:
           "title": "HTTP request duration (p95)",
           "type": "timeseries",
           "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
-          "datasource": { "type": "prometheus", "uid": "cloudwatch-otlp" },
+          "datasource": { "type": "grafana-amazonprometheus-datasource", "uid": "cloudwatch-otlp" },
           "targets": [
             {
-              "expr": "histogram_quantile(0.95, sum(rate({\"http.server.request.duration_bucket\", \"@resource.service.name\"=~\"cm-frontend|cm-backend\"}[5m])) by (le, resource_service_name))",
-              "legendFormat": "{{resource_service_name}} p95"
+              "expr": "histogram_quantile(0.95, sum by (\"@resource.service.name\", le) (rate({\"http.server.request.duration\", \"@resource.service.name\"=~\"cm-frontend|cm-backend\"}[5m])))",
+              "legendFormat": "{{@resource.service.name}} p95"
             }
           ]
         },
         {
           "id": 3,
-          "title": "Process memory (heap used)",
+          "title": "Container memory (working set)",
           "type": "timeseries",
           "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
-          "datasource": { "type": "prometheus", "uid": "cloudwatch-otlp" },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "description": "From the cluster's own Prometheus (cAdvisor), not app-level OTel metrics -- neither app is instrumented with Node.js runtime/process metrics, only HTTP/DB, so process.* metrics don't exist at all in CloudWatch. This is the actual container memory instead.",
           "targets": [
             {
-              "expr": "{\"process.runtime.nodejs.memory.heap.used\", \"@resource.service.name\"=~\"cm-frontend|cm-backend\"}",
-              "legendFormat": "{{resource_service_name}}"
+              "expr": "sum by (namespace) (container_memory_working_set_bytes{namespace=~\"backend|frontend\", container!=\"\", container!=\"POD\"})",
+              "legendFormat": "{{namespace}}"
             }
           ]
         },
         {
           "id": 4,
-          "title": "Process CPU utilization",
+          "title": "Container CPU utilization",
           "type": "timeseries",
           "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
-          "datasource": { "type": "prometheus", "uid": "cloudwatch-otlp" },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "description": "From the cluster's own Prometheus (cAdvisor) -- same reason as the memory panel.",
           "targets": [
             {
-              "expr": "{\"process.cpu.utilization\", \"@resource.service.name\"=~\"cm-frontend|cm-backend\"}",
-              "legendFormat": "{{resource_service_name}}"
+              "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{namespace=~\"backend|frontend\", container!=\"\", container!=\"POD\"}[5m]))",
+              "legendFormat": "{{namespace}}"
+            }
+          ]
+        },
+        {
+          "id": 5,
+          "title": "Pod replica count",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "expr": "kube_deployment_status_replicas{deployment=~\"cm-backend|cm-frontend\"}",
+              "legendFormat": "{{deployment}}"
             }
           ]
         }

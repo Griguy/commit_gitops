@@ -22,16 +22,22 @@ spec:
             annotations:
               eks.amazonaws.com/role-arn: arn:aws:iam::276699358299:role/commit-lab-dev-grafana
 
-          # CloudWatch's OTLP-ingested metrics live in a PromQL-queryable
-          # store, not the classic Namespace/Dimension metrics API, so this
-          # uses Grafana's Prometheus datasource type (with SigV4 auth
-          # against the pod's IRSA role) rather than the CloudWatch plugin --
-          # the same pattern Grafana already uses for Amazon Managed
-          # Prometheus workspaces.
+          # The generic "Prometheus" datasource type (previously used here)
+          # sent completely unsigned requests to this URL -- verified
+          # directly, the response was AWS's literal "Request is missing
+          # Authentication Token" error, not a permissions or query problem.
+          # It apparently only applies its sigV4Auth signing for URLs
+          # matching the *.aps-workspaces.*.amazonaws.com pattern. The
+          # dedicated Amazon Managed Service for Prometheus plugin is what
+          # AWS's own docs show pointed at the CloudWatch monitoring
+          # endpoint, and it actually signs the request.
+          plugins:
+            - grafana-amazonprometheus-datasource
+
           additionalDataSources:
             - name: CloudWatch (OTLP metrics)
               uid: cloudwatch-otlp
-              type: prometheus
+              type: grafana-amazonprometheus-datasource
               access: proxy
               url: https://monitoring.us-east-2.amazonaws.com
               jsonData:
