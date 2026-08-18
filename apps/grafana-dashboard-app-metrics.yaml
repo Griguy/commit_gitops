@@ -1,0 +1,74 @@
+# Plain ConfigMap, not an Argo CD Application -- the root app's directory
+# source applies whatever it finds under apps/ as-is, and the grafana
+# sidecar (sidecar.dashboards, enabled by default in kube-prometheus-stack)
+# auto-loads any ConfigMap in any namespace carrying the grafana_dashboard
+# label, so this just needs to exist, not be registered anywhere else.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cm-app-metrics-dashboard
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  cm-app-metrics.json: |
+    {
+      "title": "cm-backend / cm-frontend",
+      "uid": "cm-app-metrics",
+      "timezone": "utc",
+      "schemaVersion": 39,
+      "panels": [
+        {
+          "id": 1,
+          "title": "HTTP request rate",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "cloudwatch-otlp" },
+          "targets": [
+            {
+              "expr": "sum(rate({\"http.server.request.duration_count\", \"@resource.service.name\"=~\"cm-frontend|cm-backend\"}[5m])) by (resource_service_name)",
+              "legendFormat": "{{resource_service_name}}"
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "title": "HTTP request duration (p95)",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "cloudwatch-otlp" },
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, sum(rate({\"http.server.request.duration_bucket\", \"@resource.service.name\"=~\"cm-frontend|cm-backend\"}[5m])) by (le, resource_service_name))",
+              "legendFormat": "{{resource_service_name}} p95"
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Process memory (heap used)",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+          "datasource": { "type": "prometheus", "uid": "cloudwatch-otlp" },
+          "targets": [
+            {
+              "expr": "{\"process.runtime.nodejs.memory.heap.used\", \"@resource.service.name\"=~\"cm-frontend|cm-backend\"}",
+              "legendFormat": "{{resource_service_name}}"
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "title": "Process CPU utilization",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+          "datasource": { "type": "prometheus", "uid": "cloudwatch-otlp" },
+          "targets": [
+            {
+              "expr": "{\"process.cpu.utilization\", \"@resource.service.name\"=~\"cm-frontend|cm-backend\"}",
+              "legendFormat": "{{resource_service_name}}"
+            }
+          ]
+        }
+      ]
+    }

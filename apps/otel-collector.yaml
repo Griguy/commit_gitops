@@ -1,0 +1,109 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: otel-collector
+  namespace: argocd
+spec:
+  project: default
+
+  source:
+    repoURL: https://open-telemetry.github.io/opentelemetry-helm-charts
+    chart: opentelemetry-collector
+    targetRevision: 0.170.0
+    helm:
+      releaseName: otel-collector
+      values: |
+        # Single gateway instance: apps push OTLP straight to it, so there's
+        # no per-node scraping to justify a DaemonSet.
+        mode: deployment
+        replicaCount: 1
+
+        serviceAccount:
+          create: true
+          name: otel-collector
+          annotations:
+            eks.amazonaws.com/role-arn: arn:aws:iam::276699358299:role/commit-lab-dev-otel-collector
+
+        ports:
+          jaeger-compact:
+            enabled: false
+          jaeger-thrift:
+            enabled: false
+          jaeger-grpc:
+            enabled: false
+          zipkin:
+            enabled: false
+
+        config:
+          receivers:
+            jaeger: null
+            zipkin: null
+            prometheus: null
+
+          exporters:
+            # CloudWatch's OTLP endpoint is HTTP-only (no gRPC), and metrics
+            # and logs are two separate endpoints/services, so they need
+            # their own otlphttp exporter instances and sigv4 identities.
+            otlphttp/metrics:
+              tls:
+                insecure: false
+              endpoint: "https://monitoring.us-east-2.amazonaws.com/v1/metrics"
+              auth:
+                authenticator: sigv4auth/metrics
+
+            otlphttp/logs:
+              compression: gzip
+              logs_endpoint: "https://logs.us-east-2.amazonaws.com/v1/logs"
+              # Every log record on this pipeline lands in one log group/stream --
+              # fine for a single-cluster setup where service.name on each record
+              # is enough to tell frontend and backend apart in Logs Insights. A
+              # routing processor keyed on service.name would be the next step if
+              # per-service log groups become worth the extra pipeline complexity.
+              headers:
+                x-aws-log-group: /commit-lab/dev/otel
+                x-aws-log-stream: default
+              auth:
+                authenticator: sigv4auth/logs
+
+          extensions:
+            sigv4auth/metrics:
+              service: "monitoring"
+              region: "us-east-2"
+            sigv4auth/logs:
+              service: "logs"
+              region: "us-east-2"
+
+          service:
+            extensions:
+              - health_check
+              - sigv4auth/metrics
+              - sigv4auth/logs
+            pipelines:
+              metrics:
+                receivers:
+                  - otlp
+                processors:
+                  - memory_limiter
+                  - batch
+                exporters:
+                  - otlphttp/metrics
+              logs:
+                receivers:
+                  - otlp
+                processors:
+                  - memory_limiter
+                  - batch
+                exporters:
+                  - otlphttp/logs
+              traces: null
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

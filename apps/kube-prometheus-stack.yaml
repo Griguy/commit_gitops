@@ -1,0 +1,52 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kube-prometheus-stack
+  namespace: argocd
+spec:
+  project: default
+
+  source:
+    repoURL: https://prometheus-community.github.io/helm-charts
+    chart: kube-prometheus-stack
+    targetRevision: 88.3.0
+    helm:
+      values: |
+        grafana:
+          service:
+            type: ClusterIP
+
+          serviceAccount:
+            create: true
+            name: kube-prometheus-stack-grafana
+            annotations:
+              eks.amazonaws.com/role-arn: arn:aws:iam::276699358299:role/commit-lab-dev-grafana
+
+          # CloudWatch's OTLP-ingested metrics live in a PromQL-queryable
+          # store, not the classic Namespace/Dimension metrics API, so this
+          # uses Grafana's Prometheus datasource type (with SigV4 auth
+          # against the pod's IRSA role) rather than the CloudWatch plugin --
+          # the same pattern Grafana already uses for Amazon Managed
+          # Prometheus workspaces.
+          additionalDataSources:
+            - name: CloudWatch (OTLP metrics)
+              uid: cloudwatch-otlp
+              type: prometheus
+              access: proxy
+              url: https://monitoring.us-east-2.amazonaws.com
+              jsonData:
+                sigV4Auth: true
+                sigV4AuthType: default
+                sigV4Region: us-east-2
+              editable: false
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
