@@ -13,7 +13,7 @@ spec:
   # every push since they're the actual deploy trigger CodeBuild writes to.
   sources:
     - repoURL: https://github.com/Griguy/commit_charts.git
-      targetRevision: backend-0.1.0
+      targetRevision: backend-0.1.1
       path: charts/backend
       helm:
         valueFiles:

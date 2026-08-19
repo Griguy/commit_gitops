@@ -8,7 +8,7 @@ spec:
 
   sources:
     - repoURL: https://github.com/Griguy/commit_charts.git
-      targetRevision: frontend-0.1.0
+      targetRevision: frontend-0.1.1
       path: charts/frontend
       helm:
         valueFiles:
