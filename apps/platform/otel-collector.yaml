@@ -117,9 +117,6 @@ spec:
               region: "eu-central-1"
 
           service:
-            telemetry:
-              logs:
-                level: debug
             extensions:
               - health_check
               - sigv4auth/metrics
