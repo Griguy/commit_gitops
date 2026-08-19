@@ -39,11 +39,11 @@ spec:
               uid: cloudwatch-otlp
               type: grafana-amazonprometheus-datasource
               access: proxy
-              url: https://monitoring.us-east-2.amazonaws.com
+              url: https://monitoring.eu-central-1.amazonaws.com
               jsonData:
                 sigV4Auth: true
                 sigV4AuthType: default
-                sigV4Region: us-east-2
+                sigV4Region: eu-central-1
               editable: false
 
           # Grafana's own chart key is literally "grafana.ini" (the ini
@@ -69,7 +69,7 @@ spec:
               alb.ingress.kubernetes.io/group.order: "10"
               alb.ingress.kubernetes.io/scheme: internal
               alb.ingress.kubernetes.io/target-type: ip
-              alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-2:276699358299:certificate/0572f4f6-d3c0-4004-9eb7-1133e5bf6d39
+              alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:eu-central-1:276699358299:certificate/a54dc5d3-9d8d-401b-9a41-e6dff8baa5c0
               alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
               alb.ingress.kubernetes.io/ssl-redirect: '443'
             hosts:

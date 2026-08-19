@@ -13,8 +13,8 @@ spec:
     helm:
       values: |
         clusterName: commit-lab-dev
-        region: us-east-2
-        vpcId: vpc-0eeff49aae233a188
+        region: eu-central-1
+        vpcId: vpc-0467951507f69d23d
 
         # No EC2 node groups on this cluster (EKS Auto Mode), so the
         # controller's pods land on Fargate/Auto Mode compute same as
